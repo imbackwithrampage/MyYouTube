@@ -1,0 +1,135 @@
+name: Build Cobalt APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target Architecture'
+        required: true
+        default: 'android-arm'
+        type: choice
+        options:
+          - android-arm
+          - android-arm64
+      build_type:
+        description: 'Build Type'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - qa
+          - gold
+          - devel
+      fast_build:
+        description: 'Fast Build (symbol_level=0: drastically reduces compile time, RAM, and disk usage)'
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    name: Build ${{ inputs.platform }} (${{ inputs.build_type }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+
+    steps:
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
+      - name: Set up Swap Space (12 GB)
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 12
+
+      - name: Checkout Source Code (Full History)
+        uses: actions/checkout@v4
+        with:
+          path: src
+          fetch-depth: 0
+
+      - name: Configure Git Safe Directory
+        run: |
+          git config --global --add safe.directory "*"
+
+      - name: Install System Dependencies & 32-bit Architecture
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y \
+            gperf bison flex python3-setuptools \
+            gcc-multilib g++-multilib \
+            libc6:i386 libstdc++6:i386 libgcc-s1:i386 \
+            ninja-build openjdk-17-jdk
+
+      - name: Set up Depot Tools & Sync Dependencies
+        run: |
+          git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          export PATH=$PWD/depot_tools:$PATH
+          echo "$PWD/depot_tools" >> $GITHUB_PATH
+
+          cat << 'EOF' > .gclient
+          solutions = [
+            {
+              "name": "src",
+              "url": "https://github.com/${{ github.repository }}.git",
+              "deps_file": "DEPS",
+              "managed": False,
+              "custom_deps": {},
+            },
+          ]
+          target_os = ['android']
+          EOF
+
+          gclient sync --no-history
+
+      - name: Generate Android Debug Keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "C=US, O=Android, CN=Android Debug"
+
+          # Copy to relative parent directories to satisfy GN Gradle script paths
+          mkdir -p ../.android ../../.android ../../../.android
+          cp ~/.android/debug.keystore ../.android/ 2>/dev/null || true
+          cp ~/.android/debug.keystore ../../.android/ 2>/dev/null || true
+          cp ~/.android/debug.keystore ../../../.android/ 2>/dev/null || true
+
+      - name: Generate GN Build Files & Compile Cobalt APK
+        run: |
+          export PATH=$PWD/depot_tools:$PATH
+          cd src
+
+          OUT_DIR="out/${{ inputs.platform }}_${{ inputs.build_type }}"
+
+          echo "===> Generating build files for ${{ inputs.platform }} (${{ inputs.build_type }})..."
+          python3 cobalt/build/gn.py -p ${{ inputs.platform }} -c ${{ inputs.build_type }} --no-rbe
+
+          # When fast_build is enabled, strip heavy debug symbols to prevent 6h runner timeout and linker OOM
+          if [ "${{ inputs.fast_build }}" = "true" ]; then
+            echo "===> Fast build enabled: setting symbol_level = 0"
+            sed -i 's/symbol_level = [1-2]/symbol_level = 0/g' ${OUT_DIR}/args.gn
+            gn gen ${OUT_DIR}
+          fi
+
+          echo "===> Compiling cobalt_apk with Ninja..."
+          # Detect available CPU threads
+          NPROC=$(nproc)
+          echo "Building using $NPROC worker threads..."
+          ninja -C ${OUT_DIR} -j ${NPROC} cobalt_apk
+
+      - name: Upload Cobalt APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobalt-${{ inputs.platform }}-${{ inputs.build_type }}-apk
+          path: src/out/${{ inputs.platform }}_${{ inputs.build_type }}/**/*.apk
+          if-no-files-found: error
