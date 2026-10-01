@@ -213,6 +213,7 @@ jobs:
           if [ "${NINJA_EXIT_CODE}" = "124" ] || [ ${DURATION} -gt 14400 ]; then
             echo "====> Time limit reached before full link. Re-triggering next run with warm compiler cache..."
             gh workflow run "${{ github.workflow }}" \
+              --repo "${{ github.repository }}" \
               -f platform="${{ inputs.platform }}" \
               -f build_type="${{ inputs.build_type }}" \
               -f fast_build="${{ inputs.fast_build }}" \
