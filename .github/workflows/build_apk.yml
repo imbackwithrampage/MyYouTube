@@ -186,13 +186,34 @@ jobs:
           path: ~/.cache/ccache
           key: ccache-cobalt-${{ inputs.platform }}-${{ inputs.build_type }}-${{ github.run_id }}
 
-      - name: Upload Cobalt APK Artifact
+      - name: Inspect generated APKs
         if: always()
+        run: |
+          OUT_DIR="src/out/${{ inputs.platform }}_${{ inputs.build_type }}"
+
+          echo "Searching for APKs under: ${OUT_DIR}"
+          find "$OUT_DIR" -type f -name '*.apk' -print 2>/dev/null || true
+
+          APK_COUNT=$(find "$OUT_DIR" -type f -name '*.apk' 2>/dev/null | wc -l)
+          echo "APK_COUNT=${APK_COUNT}"
+
+          if [ "$APK_COUNT" -eq 0 ]; then
+            if [ "${NINJA_EXIT_CODE:-}" = "124" ]; then
+              echo "::notice::No APK was produced because the build timed out."
+            else
+              echo "::warning::No APK was produced. Ninja exit code: ${NINJA_EXIT_CODE:-unknown}"
+            fi
+          fi
+
+      - name: Upload Cobalt APK Artifact
+        if: always() && env.NINJA_EXIT_CODE == '0'
         uses: actions/upload-artifact@v4
         with:
           name: cobalt-${{ inputs.platform }}-${{ inputs.build_type }}-apk
-          path: src/out/${{ inputs.platform }}_${{ inputs.build_type }}/**/*.apk
-          if-no-files-found: ignore
+          path: |
+            src/out/${{ inputs.platform }}_${{ inputs.build_type }}/apks/*.apk
+            src/out/${{ inputs.platform }}_${{ inputs.build_type }}/*_apk/*.apk
+          if-no-files-found: error
 
       - name: Auto-Resume Workflow if Timed Out
         if: always()
