@@ -127,10 +127,10 @@ jobs:
 
           # Configure ccache
           export CCACHE_DIR=~/.cache/ccache
-          export CCACHE_MAXSIZE=10G
+          export CCACHE_MAXSIZE=35G
           export CCACHE_COMPRESS=true
           export CCACHE_COMPRESSLEVEL=6
-          ccache -M 10G
+          ccache -M 35G
           ccache -s
 
           echo "====> Generating GN build configuration..."
@@ -152,9 +152,9 @@ jobs:
           echo "====> Active args.gn configuration:"
           cat ${OUT_DIR}/args.gn
 
-          echo "====> Compiling cobalt_apk with Ninja (4.2h safety window)..."
+          echo "====> Compiling cobalt_apk with Ninja (5h safety window)..."
           set +e
-          timeout 4.2h ninja -C ${OUT_DIR} -j 2 cobalt_apk
+          timeout 5h ninja -C ${OUT_DIR} -j 2 cobalt_apk
           NINJA_EXIT=$?
           set -e
 
@@ -167,7 +167,7 @@ jobs:
           if [ ${NINJA_EXIT} -eq 0 ]; then
             echo "====> cobalt_apk build completed successfully!"
           elif [ ${NINJA_EXIT} -eq 124 ]; then
-            echo "====> 4.2h safety timeout reached. Compiler cache has been saved and will continue on next run."
+            echo "====> 5h safety timeout reached. Compiler cache has been saved and will continue on next run."
           else
             echo "====> Compilation error occurred (exit code: ${NINJA_EXIT})."
             exit ${NINJA_EXIT}
@@ -196,6 +196,11 @@ jobs:
 
           APK_COUNT=$(find "$OUT_DIR" -type f -name '*.apk' 2>/dev/null | wc -l)
           echo "APK_COUNT=${APK_COUNT}"
+          if [ "$APK_COUNT" -gt 0 ]; then
+            echo "HAS_APK=true" >> $GITHUB_ENV
+          else
+            echo "HAS_APK=false" >> $GITHUB_ENV
+          fi
 
           if [ "$APK_COUNT" -eq 0 ]; then
             if [ "${NINJA_EXIT_CODE:-}" = "124" ]; then
@@ -206,14 +211,14 @@ jobs:
           fi
 
       - name: Upload Cobalt APK Artifact
-        if: always() && env.NINJA_EXIT_CODE == '0'
+        if: always() && env.HAS_APK == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: cobalt-${{ inputs.platform }}-${{ inputs.build_type }}-apk
           path: |
             src/out/${{ inputs.platform }}_${{ inputs.build_type }}/apks/*.apk
             src/out/${{ inputs.platform }}_${{ inputs.build_type }}/*_apk/*.apk
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Auto-Resume Workflow if Timed Out
         if: always()
