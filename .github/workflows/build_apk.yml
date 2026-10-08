@@ -240,8 +240,8 @@ jobs:
           NEXT_ITERATION=$((ITERATION + 1))
           echo "Current iteration: ${ITERATION}, Next iteration: ${NEXT_ITERATION}"
 
-          if [ ${ITERATION} -ge 3 ]; then
-            echo "::error::Maximum auto-resume limit (3 iterations) reached. Halting to prevent infinite loop."
+          if [ ${ITERATION} -ge 5 ]; then
+            echo "::error::Maximum auto-resume limit (5 iterations) reached. Halting to prevent infinite loop."
             exit 1
           fi
 
