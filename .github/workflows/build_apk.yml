@@ -235,10 +235,11 @@ jobs:
             RELEASE_ASSET="Cobalt-${{ inputs.platform }}-${{ inputs.build_type }}.apk"
             cp "$APK_FILE" "./$RELEASE_ASSET"
             echo "Publishing GitHub Release: $TAG_NAME with asset: $RELEASE_ASSET"
-            gh release create "$TAG_NAME" "./$RELEASE_ASSET" \
-              --title "$RELEASE_TITLE" \
-              --notes "Automated release of Cobalt ($RELEASE_TITLE) targeting ${{ inputs.platform }}." \
-              --clobber || true
+            gh release view "$TAG_NAME" >/dev/null 2>&1 && \
+              gh release upload "$TAG_NAME" "./$RELEASE_ASSET" --clobber || \
+              gh release create "$TAG_NAME" "./$RELEASE_ASSET" \
+                --title "$RELEASE_TITLE" \
+                --notes "Automated release of Cobalt ($RELEASE_TITLE) targeting ${{ inputs.platform }}." || true
           fi
 
       - name: Auto-Resume Workflow if Timed Out
