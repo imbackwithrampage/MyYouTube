@@ -150,13 +150,31 @@ bool H5vccTizenTube::HasSystemFeature(
     return false;
   }
 
-  #ifdef BUILDFLAG(IS_ANDROID)
+  #if BUILDFLAG(IS_ANDROID)
     auto* env = base::android::AttachCurrentThread();
     starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
     bool has_feature = bridge->HasSystemFeature(env, feature_name.Utf8().data());
     return has_feature;
   #else
   return false;
+  #endif // BUILDFLAG(IS_ANDROID)
+}
+
+void H5vccTizenTube::ShowAlertDialog(
+    const WTF::String& title,
+    const WTF::String& message) {
+  if (title.IsNull() || title.length() == 0) {
+    return;
+  }
+
+  if (message.IsNull() || message.length() == 0) {
+    return;
+  }
+
+  #if BUILDFLAG(IS_ANDROID)
+    auto* env = base::android::AttachCurrentThread();
+    starboard::StarboardBridge* bridge = starboard::StarboardBridge::GetInstance();
+    bridge->ShowAlertDialog(env, title.Utf8().data(), message.Utf8().data());
   #endif // BUILDFLAG(IS_ANDROID)
 }
 

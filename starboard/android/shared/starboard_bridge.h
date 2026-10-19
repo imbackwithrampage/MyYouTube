@@ -42,12 +42,11 @@ class StarboardBridge {
 
   void AppendArgs(JNIEnv* env, std::vector<std::string>* args_vector);
 
-  jni_zero::ScopedJavaLocalRef<jintArray> GetSupportedHdrTypes(JNIEnv* env);
-
   void RaisePlatformError(JNIEnv* env,
                           jint errorType,
                           jlong data,
-                          const std::string& url);
+                          const std::string& url,
+                          bool disable_dismiss_button = false);
 
   bool IsPlatformErrorShowing(JNIEnv* env);
 
@@ -63,8 +62,12 @@ class StarboardBridge {
 
   std::string GetAdvertisingId(JNIEnv* env);
   bool GetLimitAdTracking(JNIEnv* env);
+  std::string GetFriendlyName(JNIEnv* env);
+  double GetScreenDiagonal(JNIEnv* env);
+  bool GetWasLowMemoryKilled(JNIEnv* env);
 
   void CloseApp(JNIEnv* env);
+  void RequestStop(JNIEnv* env, jint error_level);
 
   std::string GetTimeZoneId(JNIEnv* env);
 
@@ -100,7 +103,7 @@ class StarboardBridge {
       JNIEnv* env,
       jlong native_service,
       const char* service_name);
-  void CloseCobaltService(JNIEnv* env, const char* service_name);
+  void CloseCobaltService(JNIEnv* env, jlong native_service);
   bool HasCobaltService(JNIEnv* env, const char* service_name);
   void CloseAllCobaltService(JNIEnv* env) const;
 
@@ -114,6 +117,7 @@ class StarboardBridge {
   void SetFrameRate(JNIEnv* env, float frame_rate) const;
   void EnterPIP(JNIEnv* env) const;
   bool HasSystemFeature(JNIEnv* env, const char* feature_name) const;
+  void ShowAlertDialog(JNIEnv* env, const char* title, const char* message) const;
 
   void SetStartupMilestone(jint milestone) const;
   void SetStartupDiagnosisInfo(const char* key, const char* value) const;

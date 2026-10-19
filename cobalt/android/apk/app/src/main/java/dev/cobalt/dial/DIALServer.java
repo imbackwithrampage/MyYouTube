@@ -156,7 +156,7 @@ public class DIALServer {
     if (deviceName == null || deviceName.isEmpty()) {
       return "YouTube";
     }
-    return "YouTube (" + deviceName + ")";
+    return "TizenTube (" + deviceName + ")";
   }
 
   public static String getDialUdn(Context context) {

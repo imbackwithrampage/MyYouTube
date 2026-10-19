@@ -29,4 +29,5 @@ interface H5vccTizenTube {
   boolean SetUserAgent(DOMString user_agent);
   [CallWith=ScriptState, RaisesException]
   boolean HasSystemFeature(DOMString feature_name);
+  void ShowAlertDialog(DOMString title, DOMString message);
 };

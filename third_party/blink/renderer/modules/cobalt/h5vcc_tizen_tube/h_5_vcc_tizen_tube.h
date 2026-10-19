@@ -64,6 +64,8 @@ class MODULES_EXPORT H5vccTizenTube final
   bool HasSystemFeature(ScriptState* script_state,
                         const WTF::String& feature_name,
                         ExceptionState& exception_state);
+  void ShowAlertDialog(const WTF::String& title,
+                        const WTF::String& message);
 
   bool EnsureReceiverIsBound();
 

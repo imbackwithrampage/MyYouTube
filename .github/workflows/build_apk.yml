@@ -230,8 +230,9 @@ jobs:
           OUT_DIR="src/out/${{ inputs.platform }}_${{ inputs.build_type }}"
           APK_FILE=$(find "$OUT_DIR" -type f -name 'Cobalt.apk' | head -n 1)
           if [ -n "$APK_FILE" ]; then
-            TAG_NAME="v2.0.2-${{ inputs.build_type }}"
-            RELEASE_TITLE="Cobalt 2.0.2 (${{ inputs.build_type }})"
+            APP_VERSION=$(grep -oP 'version_name = "\K[^"]+' src/cobalt/android/BUILD.gn || echo "2.0.3")
+            TAG_NAME="v${APP_VERSION}-${{ inputs.build_type }}"
+            RELEASE_TITLE="Cobalt ${APP_VERSION} (${{ inputs.build_type }})"
             RELEASE_ASSET="Cobalt-${{ inputs.platform }}-${{ inputs.build_type }}.apk"
             cp "$APK_FILE" "./$RELEASE_ASSET"
             echo "Publishing GitHub Release: $TAG_NAME with asset: $RELEASE_ASSET"
