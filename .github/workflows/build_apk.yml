@@ -118,10 +118,14 @@ jobs:
             -dname "C=US, O=Android, CN=Android Debug"
 
           # Propagate keystore to relative parent directories
-          mkdir -p ../.android ../../.android ../../../.android
+          mkdir -p ../.android ../../.android ../../../.android ../../../../.android ../../../../../.android
           cp ~/.android/debug.keystore ../.android/ 2>/dev/null || true
           cp ~/.android/debug.keystore ../../.android/ 2>/dev/null || true
           cp ~/.android/debug.keystore ../../../.android/ 2>/dev/null || true
+          cp ~/.android/debug.keystore ../../../../.android/ 2>/dev/null || true
+          cp ~/.android/debug.keystore ../../../../../.android/ 2>/dev/null || true
+          mkdir -p src/.android
+          cp ~/.android/debug.keystore src/.android/ 2>/dev/null || true
 
       - name: Generate GN Build Files & Compile Cobalt APK
         run: |
