@@ -117,15 +117,11 @@ jobs:
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "C=US, O=Android, CN=Android Debug"
 
-          # Propagate keystore to relative parent directories
-          mkdir -p ../.android ../../.android ../../../.android ../../../../.android ../../../../../.android
-          cp ~/.android/debug.keystore ../.android/ 2>/dev/null || true
-          cp ~/.android/debug.keystore ../../.android/ 2>/dev/null || true
-          cp ~/.android/debug.keystore ../../../.android/ 2>/dev/null || true
-          cp ~/.android/debug.keystore ../../../../.android/ 2>/dev/null || true
-          cp ~/.android/debug.keystore ../../../../../.android/ 2>/dev/null || true
-          mkdir -p src/.android
-          cp ~/.android/debug.keystore src/.android/ 2>/dev/null || true
+          # Safely propagate keystore to all potential relative locations
+          for d in "$HOME" "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/.." "$GITHUB_WORKSPACE/../.." "$GITHUB_WORKSPACE/src" "$GITHUB_WORKSPACE/src/out" "$GITHUB_WORKSPACE/src/out/android-arm_gold"; do
+            mkdir -p "$d/.android" 2>/dev/null || true
+            cp ~/.android/debug.keystore "$d/.android/debug.keystore" 2>/dev/null || true
+          done
 
       - name: Generate GN Build Files & Compile Cobalt APK
         run: |
@@ -234,9 +230,8 @@ jobs:
           OUT_DIR="src/out/${{ inputs.platform }}_${{ inputs.build_type }}"
           APK_FILE=$(find "$OUT_DIR" -type f -name 'Cobalt.apk' | head -n 1)
           if [ -n "$APK_FILE" ]; then
-            APP_VERSION=$(grep -oP 'version_name = "\K[^"]+' src/cobalt/android/BUILD.gn || echo "2.0.3")
-            TAG_NAME="v${APP_VERSION}-${{ inputs.build_type }}"
-            RELEASE_TITLE="Cobalt ${APP_VERSION} (${{ inputs.build_type }})"
+            TAG_NAME="v2.0.3-${{ inputs.build_type }}"
+            RELEASE_TITLE="Cobalt 2.0.3 (${{ inputs.build_type }})"
             RELEASE_ASSET="Cobalt-${{ inputs.platform }}-${{ inputs.build_type }}.apk"
             cp "$APK_FILE" "./$RELEASE_ASSET"
             echo "Publishing GitHub Release: $TAG_NAME with asset: $RELEASE_ASSET"
